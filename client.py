@@ -1,9 +1,8 @@
 import socket
 import threading
 import sys
+import click
 
-#Wait for incoming data from server
-#.decode is used to turn the message in bytes to a string
 def receive(socket, signal):
     while signal:
         try:
@@ -14,25 +13,23 @@ def receive(socket, signal):
             signal = False
             break
 
-#Get host and port
-host = input("Host: ")
-port = int(input("Port: "))
+@click.command()
+@click.option('--host', prompt='Choose server host', default='localhost', help='Server ip address e.g localhost.')
+@click.option('--port', prompt='Choose server port', help='Any valid int from 1 to 65536.')
+def main(host, port):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect((host, int(port)))
+    except:
+        print("Could not make a connection to the server")
+        input("Press enter to quit")
+        sys.exit(0)
 
-#Attempt connection to server
-try:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((host, port))
-except:
-    print("Could not make a connection to the server")
-    input("Press enter to quit")
-    sys.exit(0)
+    receiveThread = threading.Thread(target = receive, args = (sock, True))
+    receiveThread.start()
+    while True:
+        message = input()
+        sock.sendall(str.encode(message))
 
-#Create new thread to wait for data
-receiveThread = threading.Thread(target = receive, args = (sock, True))
-receiveThread.start()
-
-#Send data to server
-#str.encode is used to turn the string message into bytes so it can be sent across the network
-while True:
-    message = input()
-    sock.sendall(str.encode(message))
+if __name__=='__main__':
+    main()
